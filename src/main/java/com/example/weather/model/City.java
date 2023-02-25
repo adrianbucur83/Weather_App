@@ -7,7 +7,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class City {
     private String name;
-    private double temperature;
-    private double wind;
+    private double averageTemperature;
+    private double averageWindSpeed;
 
 }

@@ -2,6 +2,7 @@ package com.example.weather.service;
 
 import com.example.weather.client.WeatherApiClient;
 import com.example.weather.model.City;
+import com.example.weather.model.WeatherForecast;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,9 +32,18 @@ public class WeatherService {
     public Flux<City> getCityFlux(List<String> cityList) {
         return Flux.fromIterable(cityList)
                 .flatMap(c -> weatherApiClient.getWeatherData(c.trim())
-                        .map(wd -> new City(c.trim(),
-                                Double.parseDouble(wd.getTemperature().split(" ")[0]),
-                                Double.parseDouble(wd.getWind().split(" ")[0])))
+                        .map(wd -> {
+                            double temperatureSum = Double.parseDouble(wd.getTemperature().split(" ")[0]);
+                            double windSum = Double.parseDouble(wd.getWind().split(" ")[0]);
+                            int forecastCount = wd.getForecast().size();
+                            for (WeatherForecast forecast : wd.getForecast()) {
+                                temperatureSum += Double.parseDouble(forecast.getTemperature().split(" ")[0]);
+                                windSum += Double.parseDouble(forecast.getWind().split(" ")[0]);
+                            }
+                            double temperatureAvg = temperatureSum / (forecastCount + 1);
+                            double windAvg = windSum / (forecastCount + 1);
+                            return new City(c.trim(), temperatureAvg, windAvg);
+                        })
                         .onErrorResume(e -> {
                             log.info("Error getting weather data for city %s: %s".formatted(c.trim(), e.getMessage()));
                             return Mono.just(new City(c.trim(), Double.NaN, Double.NaN));
@@ -44,7 +54,7 @@ public class WeatherService {
     public String createCsv(List<City> cities) {
         cities.sort(Comparator.comparing(City::getName));
         return cities.stream()
-                .map(city1 -> String.format("%s,%s,%s", city1.getName(), city1.getTemperature(), city1.getWind()))
+                .map(city1 -> String.format("%s,%s,%s", city1.getName(), city1.getAverageTemperature(), city1.getAverageWindSpeed()))
                 .collect(Collectors.joining("\n"));
     }
 

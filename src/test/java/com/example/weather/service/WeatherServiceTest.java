@@ -1,22 +1,17 @@
 package com.example.weather.service;
 
 import com.example.weather.client.WeatherApiClient;
-import com.example.weather.model.City;
-import com.example.weather.model.WeatherData;
+import com.example.weather.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -37,10 +32,21 @@ class WeatherServiceTest {
     }
 
     @Test
-    public void testGetCityFluxSuccess() {
+    void testGetCityFluxSuccess() {
         WeatherData weatherData = new WeatherData();
         weatherData.setTemperature("23 degree celsius");
         weatherData.setWind("10 km/hr");
+        weatherData.setDescription("Sunny");
+        List<WeatherForecast> forecastList = new ArrayList<>();
+        WeatherForecast forecast1 = new WeatherForecast();
+        forecast1.setTemperature("25 degree celsius");
+        forecast1.setWind("12 km/hr");
+        forecastList.add(forecast1);
+        WeatherForecast forecast2 = new WeatherForecast();
+        forecast2.setTemperature("22 degree celsius");
+        forecast2.setWind("9 km/hr");
+        forecastList.add(forecast2);
+        weatherData.setForecast(forecastList);
 
         when(weatherApiClient.getWeatherData("New York")).thenReturn(Mono.just(weatherData));
         when(weatherApiClient.getWeatherData("London")).thenReturn(Mono.just(weatherData));
@@ -55,23 +61,15 @@ class WeatherServiceTest {
         assertNotNull(cities);
         assertEquals(3, cities.size());
         assertEquals("New York", cities.get(0).getName());
-        assertEquals(23, cities.get(0).getTemperature());
-        assertEquals(10, cities.get(0).getWind());
+        assertEquals(23.33, cities.get(0).getAverageTemperature(), 0.1);
+        assertEquals(10.33, cities.get(0).getAverageWindSpeed(), 0.1);
 
-        assertEquals("London", cities.get(1).getName());
-        assertEquals(23, cities.get(1).getTemperature());
-        assertEquals(10, cities.get(1).getWind());
 
-        assertEquals("Paris", cities.get(2).getName());
-        assertEquals(23, cities.get(2).getTemperature());
-        assertEquals(10, cities.get(2).getWind());
-
-        // Verify that getWeatherData was called 3 times
         verify(weatherApiClient, times(3)).getWeatherData(anyString());
     }
 
     @Test
-    public void testGetCityFluxFailure() {
+    void testGetCityFluxFailure() {
         when(weatherApiClient.getWeatherData("New York")).thenReturn(Mono.error(new RuntimeException("Error getting weather data")));
         when(weatherApiClient.getWeatherData("London")).thenReturn(Mono.error(new RuntimeException("Error getting weather data")));
         when(weatherApiClient.getWeatherData("Paris")).thenReturn(Mono.error(new RuntimeException("Error getting weather data")));
@@ -86,16 +84,16 @@ class WeatherServiceTest {
         assertEquals(3, cities.size());
 
         assertEquals("New York", cities.get(0).getName());
-        assertEquals(Double.NaN, cities.get(0).getTemperature());
-        assertEquals(Double.NaN, cities.get(0).getWind());
+        assertEquals(Double.NaN, cities.get(0).getAverageTemperature());
+        assertEquals(Double.NaN, cities.get(0).getAverageWindSpeed());
 
         assertEquals("London", cities.get(1).getName());
-        assertEquals(Double.NaN, cities.get(1).getTemperature());
-        assertEquals(Double.NaN, cities.get(1).getWind());
+        assertEquals(Double.NaN, cities.get(1).getAverageTemperature());
+        assertEquals(Double.NaN, cities.get(1).getAverageWindSpeed());
 
         assertEquals("Paris", cities.get(2).getName());
-        assertEquals(Double.NaN, cities.get(2).getTemperature());
-        assertEquals(Double.NaN, cities.get(2).getWind());
+        assertEquals(Double.NaN, cities.get(2).getAverageTemperature());
+        assertEquals(Double.NaN, cities.get(2).getAverageWindSpeed());
 
         // Verify that getWeatherData was called 1 time
         verify(weatherApiClient, times(3)).getWeatherData(anyString());
